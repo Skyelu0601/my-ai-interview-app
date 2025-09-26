@@ -1,9 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'onboarding_flow.dart';
-import 'study_session_loading_screen.dart';
+import 'welcome_screen.dart';
+import 'main_screen.dart';
+import 'settings_flow.dart';
+import 'onboarding_state.dart';
+import 'interviewer_chat_screen.dart';
+import 'auth_state.dart';
+import 'login_screen.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await dotenv.load(fileName: '.env');
+  } catch (e) {
+    // Allow app to start even if .env is missing in local dev
+    // print instead of crashing
+    // ignore: avoid_print
+    print('Warning: .env not found or failed to load. Proceeding without it.');
+  }
   runApp(const ProviderScope(child: MyApp()));
 }
 
@@ -14,33 +30,109 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'TOMO助手',
+      title: '招才猫',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color.fromARGB(255, 231, 232, 162)),
+        // 商务风格主题配置
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF1976D2), // 专业蓝色
+          brightness: Brightness.light,
+        ),
         useMaterial3: true,
+        // 自定义商务风格配置
+        appBarTheme: const AppBarTheme(
+          elevation: 0,
+          centerTitle: true,
+          backgroundColor: Colors.transparent,
+          foregroundColor: Color(0xFF1A1A1A),
+        ),
+        cardTheme: CardThemeData(
+          elevation: 2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          color: Colors.white,
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          ),
+        ),
+        filledButtonTheme: FilledButtonThemeData(
+          style: FilledButton.styleFrom(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          ),
+        ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          ),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: Color(0xFF1976D2), width: 2),
+          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        ),
       ),
-      initialRoute: '/onboarding',
+      // 将入口点设为AppEntryWidget来管理页面流程
+      home: const AppEntryWidget(),
       routes: {
+        '/login': (_) => const LoginScreen(),
+        '/main': (_) => const MainScreen(),
+        '/welcome': (_) => const WelcomeScreen(),
         '/onboarding': (_) => const OnboardingFlow(),
-        '/home': (_) => const MyHomePage(title: 'TOMO助手'),
-        '/study': (_) => const StudySessionLoadingScreen(),
+        '/settings': (_) => const SettingsFlow(),
+        '/home': (_) => const MyHomePage(title: '招才猫'),
       },
     );
+  }
+}
+
+class AppEntryWidget extends ConsumerWidget {
+  const AppEntryWidget({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authStateProvider);
+    final onboardingState = ref.watch(onboardingStateProvider);
+    
+    // 如果用户未登录，显示登录界面
+    if (!authState.isLoggedIn) {
+      return const LoginScreen();
+    }
+    
+    // 用户已登录，检查onboarding状态
+    // 如果用户已完成onboarding，直接显示主界面
+    if (onboardingState.isOnboardingCompleted) {
+      return const MainScreen();
+    }
+    
+    // 如果用户已看过欢迎对话但未完成onboarding，显示onboarding流程
+    if (onboardingState.hasSeenWelcomeChat) {
+      return const OnboardingFlow();
+    }
+    
+    // 用户已登录但未看过欢迎对话，显示小猫对话界面
+    return const InterviewerChatScreen();
   }
 }
 

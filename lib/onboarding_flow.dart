@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'onboarding_screens.dart';
 import 'onboarding_state.dart';
+import 'mock_interview_screen.dart';
+import 'interview_loading_screen.dart';
+import 'user_profile_manager.dart';
 
 class OnboardingFlow extends ConsumerStatefulWidget {
   const OnboardingFlow({super.key});
@@ -17,17 +20,56 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
 
   bool get _canNext {
     final s = ref.watch(onboardingStateProvider);
-    if (_index == 0) return s.experienceLevel != null;
-    if (_index == 1) return s.targetIndustry != null && s.targetRole != null;
-    if (_index == 2) return s.resumeFile != null;
+    if (_index == 0) return s.targetIndustry != null && s.targetRole != null;
+    if (_index == 1) return s.resumeFile != null;
     return true;
   }
 
   void _next() {
-    if (_index < 3) {
+    if (_index < 2) {
       _controller.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
     } else {
-      Navigator.pushReplacementNamed(context, '/home');
+      // 完成onboarding，更新用户档案并标记为已完成
+      final onboardingState = ref.read(onboardingStateProvider);
+      final userProfileManager = ref.read(userProfileManagerProvider.notifier);
+      
+      // 更新用户档案中的角色信息
+      userProfileManager.updateTargetInfo(
+        industry: onboardingState.targetIndustry,
+        role: onboardingState.targetRole,
+      );
+      
+      // 更新简历信息
+      userProfileManager.updateResumeInfo(
+        resumeText: onboardingState.resumeText,
+        jobDescription: onboardingState.jobDescription,
+      );
+      
+      // 如果用户选择了角色，设置为用户角色
+      if (onboardingState.targetRole != null) {
+        userProfileManager.updateUserRole(onboardingState.targetRole!);
+      }
+      
+      // 标记onboarding完成
+      ref.read(onboardingStateProvider.notifier).completeOnboarding();
+      
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const InterviewLoadingScreen(),
+        ),
+      );
+      // 延迟跳转到面试界面，给用户时间看到等待界面
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const MockInterviewScreen(),
+            ),
+          );
+        }
+      });
     }
   }
 
@@ -39,9 +81,12 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Onboarding')),
+      appBar: AppBar(
+        title: const Text(''),
+        toolbarHeight: 0,
+        elevation: 0,
+      ),
       body: Column(
         children: [
           Expanded(
@@ -50,7 +95,6 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
               physics: const NeverScrollableScrollPhysics(),
               onPageChanged: (i) => setState(() => _index = i),
               children: const [
-                ExperienceScreen(),
                 IndustryRoleScreen(),
                 UploadResumeScreen(),
                 JobDescriptionScreen(),
@@ -70,16 +114,8 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
                   const SizedBox.shrink(),
                 const Spacer(),
                 FilledButton(
-                  onPressed: _canNext
-                      ? () {
-                          if (_index == 3) {
-                            Navigator.pushReplacementNamed(context, '/study');
-                          } else {
-                            _next();
-                          }
-                        }
-                      : null,
-                  child: Text(_index == 3 ? '开始模拟面试' : '下一步'),
+                  onPressed: _canNext ? _next : null,
+                  child: Text(_index == 2 ? '开始面试练习' : '下一步'),
                 ),
               ],
             ),
@@ -89,5 +125,3 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
     );
   }
 }
-
-

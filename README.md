@@ -1,6 +1,6 @@
-# my_ai_task_app
+# 小猫面试官
 
-A new Flutter project.
+智能面试助手应用 - 基于Flutter开发。
 
 ## Getting Started
 

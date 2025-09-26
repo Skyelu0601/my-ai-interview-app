@@ -1,11 +1,11 @@
 {
-    "name": "my_ai_task_app",
-    "short_name": "my_ai_task_app",
+    "name": "小猫面试官",
+    "short_name": "小猫面试官",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "小猫面试官 - 智能面试助手",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
